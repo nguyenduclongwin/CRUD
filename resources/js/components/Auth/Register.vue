@@ -88,7 +88,7 @@ export default {
         authUser.access_token = data.access_token;
         authUser.refresh_token = data.refresh_token;
         window.localStorage.setItem("authUser", JSON.stringify(authUser));
-        let { data:user } = await axios({
+        let { data: user } = await axios({
           method: "get",
           url: userURL,
           headers: getHeader()

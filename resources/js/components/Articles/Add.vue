@@ -51,6 +51,7 @@ export default {
         data: { title: this.title, content: this.content },
         headers: getHeader()
       });
+      console.log(response);
       this.$router.push({ name: "Article" });
     }
   }

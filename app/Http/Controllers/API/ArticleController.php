@@ -4,57 +4,74 @@ namespace App\Http\Controllers\API;
 
 use Illuminate\Support\Facades\Auth;
 use App\Article;
+use App\Exports\ArticlesExport;
 use Illuminate\Http\Request;
 use App\Http\Controllers\BaseController;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Service\ArticleService;
+use App\Http\Service\EmailService;
+use App\Http\Service\UserService;
+use App\Jobs\SendArticleEmail;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\Notification;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use Illuminate\Support\Facades\Storage;
 
 class ArticleController extends BaseController
 {
-    public function index()
+    public function __construct(ArticleService $service, UserService $user_service)
     {
-        $article = Article::where('user_id', '=', Auth::user()->id)->latest()->get();
-        return $this->sendResponse($article->toArray(), 'Retrieve Successfully');
+        $this->service = $service;
+        $this->user_service = $user_service;
     }
-
+    public function index(Request $request)
+    {
+        $article = $this->service->getArticle($request);
+        return $this->sendResponse($article, 'Retrieve Successfully');
+    }
     public function store(Request $request)
     {
-
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        $validator = Validator::make($input, [
             'title' => 'required|unique:articles',
             'content' => 'required'
         ]);
         if ($validator->fails()) {
             return $this->sendError('validator error', $validator->errors());
         }
-        $input = $request->all();
-        $input['user_id'] = Auth::user()->id;
-        $article = Article::create($input);
-        return $this->sendResponse($article->toArray(), 'Successfully');
+        $article = $this->service->createArticle($input);
+        $friend_user = $this->user_service->getFriendUser();
+        $user = $this->user_service->getUser();
+        $this->dispatch(new SendArticleEmail($friend_user, $user));
+        return $this->sendResponse($article, 'Successfully');
     }
-
     public function show(Article $article)
     {
-        return $this->sendResponse($article->toArray(), 'Successfully');
+        return $this->sendResponse($article, 'Successfully');
     }
-
-    public function update(Request $request, Article $article)
+    public function update(Request $request, $article)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|unique:articles',
+        $input = $request->only('title', 'content');
+        $validator = Validator::make($input, [
+            'title' => 'required',
             'content' => 'required'
         ]);
         if ($validator->fails()) {
             return $this->sendError('validator error', $validator->errors());
         }
-        $article->title = request("title");
-        $article->content = request("content");
-        $article->save();
-        return $this->sendResponse($article->toArray(), 'Successfully');
+        $result = $this->service->updateArticle($article, $input);
+        return $this->sendResponse($result, 'Successfully');
     }
-
-    public function destroy(Article $article)
+    public function destroy($article)
     {
-        $article->delete();
-        return $this->sendResponse($article->toArray(), 'Successfully');
+        $result = $this->service->deleteArticle($article);
+        return $this->sendResponse($result, 'Successfully');
+    }
+    public function export(Request $request)
+    {
+        $article = $this->service->getArticle($request);
+        Excel::store(new ArticlesExport($article), 'article_page' . $request->page . '.xlsx');
+        return $this->sendResponse(['url' => Storage::url('article_page' . $request->page . '.xlsx')], 'success');
     }
 }

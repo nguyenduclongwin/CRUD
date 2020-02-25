@@ -17,8 +17,10 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 Route::group(['middleware' => ['auth:api']], function () {
-    Route::resource('article','API\ArticleController');
+    Route::resource('article', 'API\ArticleController');
+    Route::resource('users', 'API\UserController');
+    Route::get('export-article', 'API\ArticleController@export');
+
 });
 
-Route::post('register','AuthController@register');
-
+Route::post('register', 'AuthController@register');

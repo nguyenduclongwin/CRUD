@@ -39,7 +39,7 @@
   </div>
 </template>
 <script>
-import { loginURL, getHeader, getData, userURL } from "../../config";
+import { getData, userURL,loginURL, getHeader  } from "../../config";
 export default {
   data() {
     return {

@@ -44,7 +44,20 @@ export default {
       content: ""
     };
   },
+  created() {
+    this.getArticle();
+  },
   methods: {
+    async getArticle() {
+      let { data } = await axios({
+        method: "get",
+        url: editArticle(this.$route.query.id),
+        headers: getHeader()
+      });
+      let { title, content } = data.data;
+      this.title = title;
+      this.content = content;
+    },
     async editArticle() {
       let response = await axios({
         method: "put",
